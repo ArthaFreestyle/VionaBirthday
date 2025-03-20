@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
+
+interface AudioContextConstructor {
+  new (): AudioContext
+}
 
 export default function CakeInteraction({ onComplete }: { onComplete: () => void }) {
   const [candles, setCandles] = useState<boolean[]>([true, true, true, true, true])
@@ -28,7 +31,9 @@ export default function CakeInteraction({ onComplete }: { onComplete: () => void
       streamRef.current = stream
 
       // Create audio context
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+      audioContextRef.current = new (
+        window.AudioContext || (window as unknown as { webkitAudioContext: AudioContextConstructor }).webkitAudioContext
+      )()
       const analyser = audioContextRef.current.createAnalyser()
       analyserRef.current = analyser
 
@@ -161,9 +166,12 @@ export default function CakeInteraction({ onComplete }: { onComplete: () => void
       </div>
 
       {micAllowed === null && (
-        <Button onClick={requestMicAccess} className="bg-gradient-to-r from-pink-500 to-purple-500">
+        <button
+          onClick={requestMicAccess}
+          className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:opacity-90 transition-colors"
+        >
           Start Blowing
-        </Button>
+        </button>
       )}
 
       {micAllowed === false && (
@@ -172,12 +180,18 @@ export default function CakeInteraction({ onComplete }: { onComplete: () => void
 
       {allOut && (
         <div className="mt-4 flex gap-3">
-          <Button onClick={resetCandles} variant="outline">
+          <button
+            onClick={resetCandles}
+            className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
+          >
             Reset Candles
-          </Button>
-          <Button onClick={onComplete} className="bg-gradient-to-r from-pink-500 to-purple-500">
+          </button>
+          <button
+            onClick={onComplete}
+            className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:opacity-90 transition-colors"
+          >
             Celebrate
-          </Button>
+          </button>
         </div>
       )}
 

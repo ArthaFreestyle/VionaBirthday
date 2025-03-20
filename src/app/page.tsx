@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Cake, Gift, Heart, Star, Sparkles, Music, VolumeX } from "lucide-react"
+import { Cake, Gift, Heart, Star, Sparkles, Music, VolumeX, Volume2 } from "lucide-react"
 import BalloonGame from "./components/balloon-game"
 import CakeInteraction from "./components/cake-interaction"
 import GiftReveal from "./components/gift-reveal"
@@ -24,8 +24,10 @@ export default function BirthdayLanding() {
     audioRef.current = new Audio("/birthday-song.mp3")
     audioRef.current.loop = true
 
+    // Try to autoplay music
     const playPromise = audioRef.current.play()
 
+    // Handle autoplay restrictions
     if (playPromise !== undefined) {
       playPromise
         .then(() => {
@@ -39,6 +41,7 @@ export default function BirthdayLanding() {
           setIsPlaying(false)
         })
     }
+
     return () => {
       if (audioRef.current) {
         audioRef.current.pause()
@@ -52,10 +55,21 @@ export default function BirthdayLanding() {
 
     if (isPlaying) {
       audioRef.current.pause()
+      setIsPlaying(false)
     } else {
-      audioRef.current.play()
+      const playPromise = audioRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true)
+            setAutoplayBlocked(false)
+          })
+          .catch((error) => {
+            console.log("Play prevented:", error)
+            setAutoplayBlocked(true)
+          })
+      }
     }
-    setIsPlaying(!isPlaying)
   }
 
   const confetti = () => {
@@ -111,34 +125,31 @@ export default function BirthdayLanding() {
       {/* Floating elements */}
       <div className="fixed inset-0 pointer-events-none">
         {isVisible &&
-          [...Array(15)].map((_, i) => {
-            // Only render these on the client after initial render
-            return (
-              <motion.div
-                key={i}
-                className="absolute"
-                initial={{
-                  x: `${i * 7}vw`,
-                  y: `${i * 5}vh`,
-                  scale: 0.5,
-                }}
-                animate={{
-                  y: [`${i * 5}vh`, `${(i * 5 + 30) % 100}vh`],
-                  x: [`${i * 7}vw`, `${(i * 7 + 20) % 100}vw`],
-                }}
-                transition={{
-                  duration: 15,
-                  repeat: Number.POSITIVE_INFINITY,
-                  repeatType: "reverse",
-                }}
-              >
-                {i % 4 === 0 && <Heart className="text-pink-300" size={16} />}
-                {i % 4 === 1 && <Star className="text-yellow-300" size={16} />}
-                {i % 4 === 2 && <Sparkles className="text-purple-300" size={16} />}
-                {i % 4 === 3 && <div className="w-3 h-3 rounded-full bg-blue-300 opacity-70"></div>}
-              </motion.div>
-            )
-          })}
+          [...Array(15)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute"
+              initial={{
+                x: `${i * 7}vw`,
+                y: `${i * 5}vh`,
+                scale: 0.5,
+              }}
+              animate={{
+                y: [`${i * 5}vh`, `${(i * 5 + 30) % 100}vh`],
+                x: [`${i * 7}vw`, `${(i * 7 + 20) % 100}vw`],
+              }}
+              transition={{
+                duration: 15,
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "reverse",
+              }}
+            >
+              {i % 4 === 0 && <Heart className="text-pink-300" size={16} />}
+              {i % 4 === 1 && <Star className="text-yellow-300" size={16} />}
+              {i % 4 === 2 && <Sparkles className="text-purple-300" size={16} />}
+              {i % 4 === 3 && <div className="w-3 h-3 rounded-full bg-blue-300 opacity-70"></div>}
+            </motion.div>
+          ))}
       </div>
 
       {/* Audio control */}
@@ -150,6 +161,19 @@ export default function BirthdayLanding() {
       >
         {isPlaying ? <VolumeX size={20} /> : <Music size={20} />}
       </motion.button>
+
+      {/* Autoplay notification */}
+      {autoplayBlocked && (
+        <motion.div
+          className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white bg-opacity-90 px-4 py-2 rounded-full shadow-md flex items-center gap-2"
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Volume2 size={16} className="text-pink-500" />
+          <span className="text-sm">Click anywhere to enable music</span>
+        </motion.div>
+      )}
 
       {/* Main content */}
       <AnimatePresence mode="wait">
@@ -184,6 +208,21 @@ export default function BirthdayLanding() {
             animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6 }}
+            onClick={() => {
+              if (autoplayBlocked && !isPlaying && audioRef.current) {
+                const playPromise = audioRef.current.play()
+                if (playPromise !== undefined) {
+                  playPromise
+                    .then(() => {
+                      setIsPlaying(true)
+                      setAutoplayBlocked(false)
+                    })
+                    .catch((error) => {
+                      console.log("Play still prevented:", error)
+                    })
+                }
+              }
+            }}
           >
             <div className="bg-white bg-opacity-90 backdrop-blur-sm rounded-3xl shadow-xl overflow-hidden">
               {/* Top decoration */}
@@ -197,7 +236,7 @@ export default function BirthdayLanding() {
                     transition={{ delay: 0.5, duration: 0.8 }}
                   >
                     <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-transparent bg-clip-text mb-4 text-center">
-                      Happy Birthday Viooooo!
+                      Happy Birthday Vioooo!
                     </h1>
 
                     <p className="text-gray-600 mb-8 text-center max-w-lg mx-auto">
@@ -206,9 +245,6 @@ export default function BirthdayLanding() {
 Selamat ulang tahun! 🎂🎁🎈
                     </p>
                   </motion.div>
-                  <div>
-                  <iframe src="https://giphy.com/embed/uBuzWfwVcadRC" width="480" height="307" frameBorder="0" className="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/animation-movie-minions-uBuzWfwVcadRC">via GIPHY</a></p>
-                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
                     <GameCard
@@ -218,8 +254,15 @@ Selamat ulang tahun! 🎂🎁🎈
                       onClick={() => {
                         setActiveGame("balloons")
                         if (!isPlaying && audioRef.current) {
-                          audioRef.current.play()
-                          setIsPlaying(true)
+                          audioRef.current
+                            .play()
+                            .then(() => {
+                              setIsPlaying(true)
+                              setAutoplayBlocked(false)
+                            })
+                            .catch(() => {
+                              // Already handling errors in the main audio setup
+                            })
                         }
                       }}
                     />
@@ -231,8 +274,15 @@ Selamat ulang tahun! 🎂🎁🎈
                       onClick={() => {
                         setActiveGame("cake")
                         if (!isPlaying && audioRef.current) {
-                          audioRef.current.play()
-                          setIsPlaying(true)
+                          audioRef.current
+                            .play()
+                            .then(() => {
+                              setIsPlaying(true)
+                              setAutoplayBlocked(false)
+                            })
+                            .catch(() => {
+                              // Already handling errors in the main audio setup
+                            })
                         }
                       }}
                     />
@@ -244,8 +294,15 @@ Selamat ulang tahun! 🎂🎁🎈
                       onClick={() => {
                         setActiveGame("gifts")
                         if (!isPlaying && audioRef.current) {
-                          audioRef.current.play()
-                          setIsPlaying(true)
+                          audioRef.current
+                            .play()
+                            .then(() => {
+                              setIsPlaying(true)
+                              setAutoplayBlocked(false)
+                            })
+                            .catch(() => {
+                              // Already handling errors in the main audio setup
+                            })
                         }
                       }}
                     />
@@ -257,8 +314,15 @@ Selamat ulang tahun! 🎂🎁🎈
                       onClick={() => {
                         setActiveGame("memory")
                         if (!isPlaying && audioRef.current) {
-                          audioRef.current.play()
-                          setIsPlaying(true)
+                          audioRef.current
+                            .play()
+                            .then(() => {
+                              setIsPlaying(true)
+                              setAutoplayBlocked(false)
+                            })
+                            .catch(() => {
+                              // Already handling errors in the main audio setup
+                            })
                         }
                       }}
                     />
@@ -268,6 +332,7 @@ Selamat ulang tahun! 🎂🎁🎈
 
               {/* Bottom decoration */}
               <div className="flex justify-between px-8 py-4 bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100">
+                <p className="text-sm text-gray-500">Made with ❤️</p>
                 <p className="text-sm text-gray-500">{isVisible ? new Date().getFullYear() : "2023"}</p>
               </div>
             </div>

@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Button } from "../../components/ui/button"
 
 type Balloon = {
   id: number
@@ -20,7 +19,32 @@ export default function BalloonGame({ onComplete }: { onComplete: () => void }) 
   const [gameStarted, setGameStarted] = useState(false)
   const [gameOver, setGameOver] = useState(false)
 
-  const colors = ["#FF9FF3", "#FECA57", "#FF6B6B", "#48DBFB", "#1DD1A1", "#F368E0"]
+  const isMounted = useRef(false)
+
+  useEffect(() => {
+    isMounted.current = true
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
+
+  // Use useCallback to memoize the createBalloon function
+  const createBalloon = useCallback((id: number): Balloon => {
+    // Define colors inside the callback to avoid dependency issues
+    const colors = ["#FF9FF3", "#FECA57", "#FF6B6B", "#48DBFB", "#1DD1A1", "#F368E0"]
+    
+    // Use a deterministic pattern based on id for server rendering
+    const idBasedRandom = (id % 10) / 10;
+    
+    return {
+      id,
+      x: gameStarted && isMounted.current ? (10 + Math.random() * 80) : (10 + idBasedRandom * 80), // percentage
+      y: gameStarted && isMounted.current ? (110 + Math.random() * 20) : 110, // start below screen
+      color: colors[id % colors.length],
+      size: gameStarted && isMounted.current ? (40 + Math.random() * 40) : 40,
+      popped: false,
+    }
+  }, [gameStarted]);
 
   useEffect(() => {
     if (!gameStarted) return
@@ -58,18 +82,7 @@ export default function BalloonGame({ onComplete }: { onComplete: () => void }) 
       clearInterval(timer)
       clearInterval(balloonTimer)
     }
-  }, [gameStarted])
-
-  const createBalloon = (id: number): Balloon => {
-    return {
-      id,
-      x: 10 + Math.random() * 80, // percentage
-      y: 110 + Math.random() * 20, // start below screen
-      color: colors[Math.floor(Math.random() * colors.length)],
-      size: 40 + Math.random() * 40,
-      popped: false,
-    }
-  }
+  }, [gameStarted, createBalloon])
 
   const popBalloon = (id: number) => {
     setBalloons((prev) => prev.map((balloon) => (balloon.id === id ? { ...balloon, popped: true } : balloon)))
@@ -78,7 +91,7 @@ export default function BalloonGame({ onComplete }: { onComplete: () => void }) 
     // Play pop sound
     const audio = new Audio()
     audio.src =
-      "data:audio/wav;base64,UklGRpQFAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YXAFAACAgICAgICAgICAgICAgICAgICAgICAgICAf3hxeH+AfXZ1eHx6dnR5fYGFgoOKi42aloubq6GOjI2Op7ythXJ0eYF5aV1AOFFib32HmZSHhpCalIiYi4lzXnBpZWBRSUdLVWRwdHGBkZSOkpiYkpOUi3hsZWptbGlnbG9veX2Dh4iEhIaGhYOCgH96dXJwbmtqaWdmZmVlZGNjYmFgX15dXFxbWllYV1ZVVFNSUVBPTk1MS0pJSEdGRURDQkFAPz49PDs6OTg3NjU0MzIxMC8uLSwrKikoJyYlJCMiISAfHh0cGxoZGBcWFRQTEhEQDw4NDAsKCQgHBgUEAwIBAAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5/gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp+goaKjpKWmp6ipqqusra6vsLGys7S1tre4ubq7vL2+v8DBwsPExcbHyMnKy8zNzs/Q0dLT1NXW19jZ2tvc3d7f4OHi4+Tl5ufo6err7O3u7/Dx8vP09fb3+Pn6+/z9/v8AAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4/QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl9gYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr/AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfY2drb3N3e3+Dh4uPk5ebn6Onq6+zt7u/w8fLz9PX29/j5+vv8/f7/AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w=="
+      "data:audio/wav;base64,UklGRpQFAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YXAFAACAgICAgICAgICAgICAgICAgICAgICAgICAf3hxeH+AfXZ1eHx6dnR5fYGFgoOKi42aloubq6GOjI2Op7ythXJ0eYF5aV1AOFFib32HmZSHhpCalIiYi4lzXnBpZWBRSUdLVWRwdHGBkZSOkpiYkpOUi3hsZWptbGlnbG9veX2Dh4iEhIaGhYOCgH96dXJwbmtqaWdmZmVlZGNjYmFgX15dXFxbWllYV1ZVVFNSUVBPTk1MS0pJSEdGRURDQkFAPz49PDs6OTg3NjU0MzIxMC8uLSwrKikoJyYlJCMiISAfHh0cGxoZGBcWFRQTEhEQDw4NDAsKCQgHBgUEAwIBAAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr/AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfY2drb3N3e3+Dh4uPk5ebn6Onq6+zt7u/w8fLz9PX29/j5+vv8/f7/AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w=="
     audio.volume = 0.2
     audio.play()
   }
@@ -103,9 +116,12 @@ export default function BalloonGame({ onComplete }: { onComplete: () => void }) 
       {!gameStarted && !gameOver ? (
         <div className="text-center">
           <p className="mb-4">Pop as many balloons as you can in 30 seconds!</p>
-          <Button onClick={startGame} className="bg-gradient-to-r from-pink-500 to-purple-500">
+          <button
+            onClick={startGame}
+            className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:opacity-90 transition-colors"
+          >
             Start Game
-          </Button>
+          </button>
         </div>
       ) : (
         <>
@@ -159,12 +175,18 @@ export default function BalloonGame({ onComplete }: { onComplete: () => void }) 
               <h3 className="text-xl font-bold mb-2">Game Over!</h3>
               <p className="mb-4">You popped {score} balloons!</p>
               <div className="flex gap-3">
-                <Button onClick={restartGame} className="bg-gradient-to-r from-pink-500 to-purple-500">
+                <button
+                  onClick={restartGame}
+                  className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:opacity-90 transition-colors"
+                >
                   Play Again
-                </Button>
-                <Button onClick={onComplete} variant="outline">
+                </button>
+                <button
+                  onClick={onComplete}
+                  className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
+                >
                   Celebrate
-                </Button>
+                </button>
               </div>
             </div>
           )}
@@ -173,4 +195,3 @@ export default function BalloonGame({ onComplete }: { onComplete: () => void }) 
     </div>
   )
 }
-
