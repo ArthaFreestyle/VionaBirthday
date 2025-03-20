@@ -246,6 +246,10 @@ Selamat ulang tahun! 🎂🎁🎈
                     </p>
                   </motion.div>
 
+                  <div>
+                  <iframe src="https://giphy.com/embed/uBuzWfwVcadRC" width="480" height="307" frameBorder="0" className="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/animation-movie-minions-uBuzWfwVcadRC">via GIPHY</a></p>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
                     <GameCard
                       title="Pop the Balloons"
