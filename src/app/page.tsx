@@ -336,7 +336,6 @@ Selamat ulang tahun! 🎂🎁🎈
 
               {/* Bottom decoration */}
               <div className="flex justify-between px-8 py-4 bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100">
-                <p className="text-sm text-gray-500">Made with ❤️</p>
                 <p className="text-sm text-gray-500">{isVisible ? new Date().getFullYear() : "2023"}</p>
               </div>
             </div>
